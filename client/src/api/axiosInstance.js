@@ -1,8 +1,13 @@
 import axios from 'axios';
 import { auth } from '../config/firebase';
 
+let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+if (apiUrl && !apiUrl.endsWith('/api')) {
+  apiUrl += '/api';
+}
+
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: apiUrl,
 });
 
 // Add a request interceptor
