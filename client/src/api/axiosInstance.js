@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { auth } from '../config/firebase';
 
-let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-// ensure /api is added only once
-if (!apiUrl.endsWith('/api')) {
+let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+if (apiUrl && !apiUrl.endsWith('/api')) {
   apiUrl += '/api';
 }
 
@@ -12,28 +10,21 @@ const axiosInstance = axios.create({
   baseURL: apiUrl,
 });
 
-// 🔥 FIXED INTERCEPTOR
+// Add a request interceptor
 axiosInstance.interceptors.request.use(
   async (config) => {
-    try {
-      const user = auth.currentUser;
-
-      if (user) {
-        // 🔥 force refresh token
-        const token = await user.getIdToken(true);
-
+    // Get the current user's Firebase token
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken();
+      if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        console.warn("No Firebase user found");
       }
-
-      return config;
-    } catch (error) {
-      console.error("Error attaching token:", error);
-      return config;
     }
+    return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
 export default axiosInstance;
