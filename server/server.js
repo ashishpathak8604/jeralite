@@ -15,8 +15,23 @@ require('./config/firebase');
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',      // Local Vite dev
+  'http://localhost:3000',      // Local development
+  'http://localhost:3002',      // Local development (current)
+  'https://jeralite-production-9fc7.up.railway.app', // Railway frontend
+  process.env.FRONTEND_URL,     // Additional frontend URL from env
+].filter(Boolean);
+
 app.use(cors({
-  origin: '*', // Allow all origins (you can restrict this later to your frontend URL)
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
   credentials: true
