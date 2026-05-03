@@ -7,47 +7,54 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [dbUser, setDbUser] = useState(null); // The user data from our MongoDB
-  const [loading, setLoading] = useState(true);
+  const [dbUser, setDbUser] = useState(null);
+  // authLoading = true until Firebase has fully resolved + backend call complete
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      
+
       if (user) {
         try {
-          // Whenever auth state changes to a logged-in user, fetch their profile from our backend.
-          // The axiosInstance will automatically attach their Firebase token.
-          // Our backend will verify the token, and create the MongoDB user if it doesn't exist.
+          // Firebase user is confirmed present here, so axiosInstance
+          // will successfully attach the token via its interceptor.
           const res = await axiosInstance.get('/users/me');
           setDbUser(res.data);
         } catch (error) {
-          console.error("Error fetching user data from backend:", error);
+          console.error('Error fetching user data from backend:', error);
+          // Don't block the app if the backend call fails —
+          // the user is still Firebase-authenticated.
+          setDbUser(null);
         }
       } else {
         setDbUser(null);
       }
-      
-      setLoading(false);
+
+      // Only mark auth as ready after BOTH firebase + backend have resolved
+      setAuthLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  const logout = () => {
+  const logout = async () => {
+    setDbUser(null);
+    setCurrentUser(null);
     return signOut(auth);
   };
 
   const value = {
     currentUser,
     dbUser,
+    authLoading,
     logout,
-    isAuthenticated: !!currentUser
+    isAuthenticated: !!currentUser,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
