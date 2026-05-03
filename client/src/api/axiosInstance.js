@@ -8,6 +8,7 @@ if (apiUrl && !apiUrl.endsWith('/api')) {
 
 const axiosInstance = axios.create({
   baseURL: apiUrl,
+  withCredentials: true, // Required for cross-origin requests with cookies/auth
 });
 
 /**
