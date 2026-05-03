@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registerUser } from '../api/authApi';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../config/firebase';
 import { motion } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
 
@@ -18,7 +19,10 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      await registerUser(name, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, {
+        displayName: name
+      });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Failed to create account');
