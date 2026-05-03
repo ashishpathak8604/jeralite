@@ -1,2 +1,24 @@
-// Generate JWT Token — Phase 1
-// TODO: generateToken(userId) — signs and returns a JWT
+const jwt = require('jsonwebtoken');
+
+const generateToken = (userId, email) => {
+  const token = jwt.sign(
+    { userId, email },
+    process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+    { expiresIn: '60m' } // 60 minutes
+  );
+  return token;
+};
+
+const verifyToken = (token) => {
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+    );
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+};
+
+module.exports = { generateToken, verifyToken };

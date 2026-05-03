@@ -1,4 +1,4 @@
-const admin = require('../config/firebase');
+const { verifyToken } = require('../utils/generateToken');
 const User = require('../models/User');
 
 const protect = async (req, res, next) => {
@@ -12,19 +12,19 @@ const protect = async (req, res, next) => {
       // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token via Firebase
-      const decodedToken = await admin.auth().verifyIdToken(token);
+      // Verify JWT token
+      const decoded = verifyToken(token);
 
-      // Find user in DB by firebaseUid
-      let user = await User.findOne({ firebaseUid: decodedToken.uid });
+      if (!decoded) {
+        return res.status(401).json({ message: 'Not authorized, token expired or invalid' });
+      }
 
-      // If user doesn't exist in our DB, create them (auto-sync on first login)
+      // Find user in DB by userId
+      let user = await User.findById(decoded.userId);
+
+      // If user doesn't exist in our DB, return error
       if (!user) {
-        user = await User.create({
-          firebaseUid: decodedToken.uid,
-          email: decodedToken.email,
-          name: decodedToken.name || decodedToken.email.split('@')[0], // fallback name
-        });
+        return res.status(401).json({ message: 'User not found' });
       }
 
       req.user = user;
