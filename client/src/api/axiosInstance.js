@@ -11,19 +11,16 @@ const axiosInstance = axios.create({
 });
 
 /**
- * Returns a Promise that resolves with the current Firebase user
- * once auth state has been fully initialized.
- * This is the key fix: instead of reading auth.currentUser (which is null
- * during the brief initialization window), we wait for the first
- * onAuthStateChanged event to fire.
+ * Waits for Firebase Auth to fully initialize and returns the current user.
+ *
+ * CRITICAL FIX: auth.currentUser starts as `null` (NOT `undefined`) during
+ * the initialization window. The only reliable way to know when Firebase has
+ * truly resolved is to listen for the first onAuthStateChanged event.
  */
-const getCurrentUser = () => {
+const waitForAuthReady = () => {
   return new Promise((resolve) => {
-    // If Firebase has already resolved, return immediately
-    if (auth.currentUser !== undefined) {
-      return resolve(auth.currentUser);
-    }
-    // Otherwise wait for the first auth state change event
+    // onAuthStateChanged fires once immediately with the resolved state.
+    // Unsubscribing right after ensures we only use it as a one-shot check.
     const unsubscribe = auth.onAuthStateChanged((user) => {
       unsubscribe();
       resolve(user);
@@ -31,13 +28,14 @@ const getCurrentUser = () => {
   });
 };
 
-// Request interceptor — waits for Firebase to initialize before attaching token
+// Request interceptor — always waits for Firebase to be ready before attaching the token
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
-      const user = await getCurrentUser();
+      const user = await waitForAuthReady();
       if (user) {
-        const token = await user.getIdToken();
+        // force=true ensures we always get a fresh, non-expired token
+        const token = await user.getIdToken(true);
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
